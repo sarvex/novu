@@ -1,3 +1,4 @@
+import { MarkAllMessageAsSeenByFeed } from './mark-all-message-as-seen-by-feed/mark-all-message-as-seen-by-feed.usecase';
 import { GetOrganizationData } from './get-organization-data/get-organization-data.usecase';
 import { MarkMessageAs } from './mark-message-as/mark-message-as.usecase';
 import { GetNotificationsFeed } from './get-notifications-feed/get-notifications-feed.usecase';
@@ -8,6 +9,7 @@ import { MarkAllMessageAsSeen } from './mark-all-message-as-seen/mark-all-messag
 import { GetFeedCount } from './get-feed-count/get-feed-count.usecase';
 
 export const USE_CASES = [
+  MarkAllMessageAsSeenByFeed,
   GetOrganizationData,
   UpdateMessageActions,
   MarkMessageAs,
