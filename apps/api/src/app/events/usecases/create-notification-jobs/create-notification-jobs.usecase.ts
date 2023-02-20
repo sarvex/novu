@@ -11,6 +11,7 @@ import {
   GetDecryptedIntegrationsCommand,
 } from '../../../integrations/usecases/get-decrypted-integrations';
 import { ApiException } from '../../../shared/exceptions/api.exception';
+import { PerformanceService } from '../../../shared/services/performance';
 
 const LOG_CONTEXT = 'CreateNotificationUseCase';
 
@@ -21,10 +22,18 @@ export class CreateNotificationJobs {
   constructor(
     private digestFilterSteps: DigestFilterSteps,
     private getDecryptedIntegrations: GetDecryptedIntegrations,
-    private notificationRepository: NotificationRepository
+    private notificationRepository: NotificationRepository,
+    protected performanceService: PerformanceService
   ) {}
 
   public async execute(command: CreateNotificationJobsCommand): Promise<NotificationJob[]> {
+    const mark = this.performanceService?.buildNotificationMark(
+      command.identifier,
+      command.transactionId,
+      command.to.subscriberId
+    );
+    this.performanceService?.setStart(mark);
+
     const notification = await this.notificationRepository.create({
       _environmentId: command.environmentId,
       _organizationId: command.organizationId,
@@ -51,6 +60,7 @@ export class CreateNotificationJobs {
         userId: command.userId,
         templateId: command.template._id,
         notificationId: notification._id,
+        transactionId: command.transactionId,
       })
     );
 
@@ -87,6 +97,8 @@ export class CreateNotificationJobs {
 
       jobs.push(job);
     }
+
+    this.performanceService?.setEnd(mark);
 
     return jobs;
   }

@@ -15,6 +15,7 @@ import {
   DetailEnum,
 } from '../../../execution-details/usecases/create-execution-details/create-execution-details.command';
 import { ApiException } from '../../../shared/exceptions/api.exception';
+import { PerformanceService } from '../../../shared/services/performance';
 
 const LOG_CONTEXT = 'TriggerEventUseCase';
 
@@ -27,10 +28,14 @@ export class TriggerEvent {
     private jobRepository: JobRepository,
     private notificationRepository: NotificationRepository,
     private notificationTemplateRepository: NotificationTemplateRepository,
-    protected createExecutionDetails: CreateExecutionDetails
+    protected createExecutionDetails: CreateExecutionDetails,
+    protected performanceService: PerformanceService
   ) {}
 
   async execute(command: TriggerEventCommand) {
+    const mark = this.performanceService?.buildEventMark(command.identifier, command.transactionId);
+    this.performanceService.setStart(mark);
+
     const { actor, environmentId, identifier, organizationId, to, userId } = command;
 
     await this.validateTransactionIdProperty(command.transactionId, organizationId, environmentId);
@@ -107,6 +112,8 @@ export class TriggerEvent {
     for (const job of jobs) {
       await this.storeAndAddJob(job);
     }
+
+    this.performanceService?.setEnd(mark);
   }
 
   private async storeAndAddJob(jobs: Omit<JobEntity, '_id'>[]) {
