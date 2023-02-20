@@ -89,6 +89,12 @@ export class ApiService {
     });
   }
 
+  async markAllMessageAsRead(feedId?: string): Promise<any> {
+    return await this.httpClient.post(`/widgets/messages/feed/markAsRead`, {
+      feedId,
+    });
+  }
+
   async getNotificationsList(
     page: number,
     query: IStoreQuery = {}

@@ -48,6 +48,8 @@ import { StoreQuery } from './queries/store.query';
 import { GetFeedCountCommand } from './usecases/get-feed-count/get-feed-count.command';
 import { GetFeedCount } from './usecases/get-feed-count/get-feed-count.usecase';
 import { GetCountQuery } from './queries/get-count.query';
+import { MarkAllMessageAsReadByFeedCommand } from './usecases/mark-all-message-as-read-by-feed/mark-all-message-as-read-by-feed.command';
+import { MarkAllMessageAsReadByFeed } from './usecases/mark-all-message-as-read-by-feed/mark-all-message-as-read-by-feed.usecase';
 
 @Controller('/widgets')
 @ApiExcludeController()
@@ -62,6 +64,7 @@ export class WidgetsController {
     private getOrganizationUsecase: GetOrganizationData,
     private getSubscriberPreferenceUsecase: GetSubscriberPreference,
     private updateSubscriberPreferenceUsecase: UpdateSubscriberPreference,
+    private markAllMessageAsReadByFeedUsecase: MarkAllMessageAsReadByFeed,
     @Inject(ANALYTICS_SERVICE) private analyticsService: AnalyticsService
   ) {}
 
@@ -222,6 +225,25 @@ export class WidgetsController {
     });
 
     return await this.markMessageAsUsecase.execute(command);
+  }
+
+  @ApiOperation({
+    summary: "Mark subscriber feed's all unread messages as read",
+  })
+  @UseGuards(AuthGuard('subscriberJwt'))
+  @Post('/messages/feed/markAsRead')
+  async markMessageAsReadByFeed(
+    @SubscriberSession() subscriberSession: SubscriberEntity,
+    @Body() body: { feedId?: string }
+  ) {
+    const command = MarkAllMessageAsReadByFeedCommand.create({
+      organizationId: subscriberSession._organizationId,
+      subscriberId: subscriberSession.subscriberId,
+      environmentId: subscriberSession._environmentId,
+      feedId: body.feedId,
+    });
+
+    return await this.markAllMessageAsReadByFeedUsecase.execute(command);
   }
 
   @UseGuards(AuthGuard('subscriberJwt'))
