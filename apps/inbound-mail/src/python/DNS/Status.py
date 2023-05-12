@@ -9,6 +9,7 @@
  Status values in message header
 """
 
+
 NOERROR   = 0 #   No Error                           [RFC 1035]
 FORMERR   = 1 #   Format Error                       [RFC 1035]
 SERVFAIL  = 2 #   Server Failure                     [RFC 1035]
@@ -31,9 +32,7 @@ BADALG    = 21 #  Algorithm not supported            [RFC 2930]
 # Construct reverse mapping dictionary
 
 _names = dir()
-statusmap = {}
-for _name in _names:
-    if _name[0] != '_': statusmap[eval(_name)] = _name
+statusmap = {eval(_name): _name for _name in _names if _name[0] != '_'}
 
 def statusstr(status):
     if statusmap.has_key(status): return statusmap[status]

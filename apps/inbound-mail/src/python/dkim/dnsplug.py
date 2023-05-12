@@ -42,9 +42,7 @@ def get_txt_pydns(name):
     if name.endswith('.'):
         name = name[:-1]
     response = DNS.DnsRequest(name, qtype='txt').req()
-    if not response.answers:
-        return None
-    return b''.join(response.answers[0]['data'])
+    return None if not response.answers else b''.join(response.answers[0]['data'])
 
 def get_txt_Milter_dns(name):
     """Return a TXT record associated with a DNS name."""
@@ -52,9 +50,7 @@ def get_txt_Milter_dns(name):
     if name.endswith('.'):
         name = name[:-1]
     sess = Session()
-    a = sess.dns(name,'TXT')
-    if a: return b''.join(a[0])
-    return None
+    return b''.join(a[0]) if (a := sess.dns(name,'TXT')) else None
 
 # Prefer dnspython if it's there, otherwise use pydns.
 try:

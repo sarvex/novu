@@ -112,12 +112,11 @@ def parse_public_key(data):
         x = asn1_parse(ASN1_Object, data)
         pkd = asn1_parse(ASN1_RSAPublicKey, x[0][1][1:])
     except ASN1FormatError as e:
-        raise UnparsableKeyError('Unparsable public key: ' + str(e))
-    pk = {
+        raise UnparsableKeyError(f'Unparsable public key: {str(e)}')
+    return {
         'modulus': pkd[0][0],
         'publicExponent': pkd[0][1],
     }
-    return pk
 
 
 def parse_private_key(data):
@@ -129,8 +128,8 @@ def parse_private_key(data):
     try:
         pka = asn1_parse(ASN1_RSAPrivateKey, data)
     except ASN1FormatError as e:
-        raise UnparsableKeyError('Unparsable private key: ' + str(e))
-    pk = {
+        raise UnparsableKeyError(f'Unparsable private key: {str(e)}')
+    return {
         'version': pka[0][0],
         'modulus': pka[0][1],
         'publicExponent': pka[0][2],
@@ -141,7 +140,6 @@ def parse_private_key(data):
         'exponent2': pka[0][7],
         'coefficient': pka[0][8],
     }
-    return pk
 
 
 def parse_pem_private_key(data):
@@ -154,7 +152,7 @@ def parse_pem_private_key(data):
     if m is None:
         raise UnparsableKeyError("Private key not found")
     try:
-        pkdata = base64.b64decode(m.group(1))
+        pkdata = base64.b64decode(m[1])
     except TypeError as e:
         raise UnparsableKeyError(str(e))
     return parse_private_key(pkdata)

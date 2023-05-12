@@ -139,83 +139,75 @@ def hash_headers(hasher, canonicalize_headers, headers, include_headers,
     return sign_headers
 
 def validate_signature_fields(sig):
-    """Validate DKIM-Signature fields.
+  """Validate DKIM-Signature fields.
 
     Basic checks for presence and correct formatting of mandatory fields.
     Raises a ValidationError if checks fail, otherwise returns None.
 
     @param sig: A dict mapping field keys to values.
     """
-    mandatory_fields = (b'v', b'a', b'b', b'bh', b'd', b'h', b's')
-    for field in mandatory_fields:
-        if field not in sig:
-            raise ValidationError("signature missing %s=" % field)
+  mandatory_fields = (b'v', b'a', b'b', b'bh', b'd', b'h', b's')
+  for field in mandatory_fields:
+    if field not in sig:
+      raise ValidationError(f"signature missing {field}=")
 
-    if sig[b'v'] != b"1":
-        raise ValidationError("v= value is not 1 (%s)" % sig[b'v'])
-    if re.match(br"[\s0-9A-Za-z+/]+=*$", sig[b'b']) is None:
-        raise ValidationError("b= value is not valid base64 (%s)" % sig[b'b'])
-    if re.match(br"[\s0-9A-Za-z+/]+=*$", sig[b'bh']) is None:
-        raise ValidationError(
-            "bh= value is not valid base64 (%s)" % sig[b'bh'])
+  if sig[b'v'] != b"1":
+    raise ValidationError(f"v= value is not 1 ({sig[b'v']})")
+  if re.match(br"[\s0-9A-Za-z+/]+=*$", sig[b'b']) is None:
+    raise ValidationError(f"b= value is not valid base64 ({sig[b'b']})")
+  if re.match(br"[\s0-9A-Za-z+/]+=*$", sig[b'bh']) is None:
+    raise ValidationError(f"bh= value is not valid base64 ({sig[b'bh']})")
     # Nasty hack to support both str and bytes... check for both the
     # character and integer values.
-    if b'i' in sig and (
+  if b'i' in sig and (
         not sig[b'i'].endswith(sig[b'd']) or
         sig[b'i'][-len(sig[b'd'])-1] not in ('@', '.', 64, 46)):
-        raise ValidationError(
-            "i= domain is not a subdomain of d= (i=%s d=%s)" %
-            (sig[b'i'], sig[b'd']))
-    if b'l' in sig and re.match(br"\d{,76}$", sig['l']) is None:
-        raise ValidationError(
-            "l= value is not a decimal integer (%s)" % sig[b'l'])
-    if b'q' in sig and sig[b'q'] != b"dns/txt":
-        raise ValidationError("q= value is not dns/txt (%s)" % sig[b'q'])
-    if b't' in sig and re.match(br"\d+$", sig[b't']) is None:
-        raise ValidationError(
-            "t= value is not a decimal integer (%s)" % sig[b't'])
-    if b'x' in sig:
-        if re.match(br"\d+$", sig[b'x']) is None:
-            raise ValidationError(
-                "x= value is not a decimal integer (%s)" % sig[b'x'])
-        if int(sig[b'x']) < int(sig[b't']):
-            raise ValidationError(
-                "x= value is less than t= value (x=%s t=%s)" %
-                (sig[b'x'], sig[b't']))
+    raise ValidationError(
+        f"i= domain is not a subdomain of d= (i={sig[b'i']} d={sig[b'd']})")
+  if b'l' in sig and re.match(br"\d{,76}$", sig['l']) is None:
+    raise ValidationError(f"l= value is not a decimal integer ({sig[b'l']})")
+  if b'q' in sig and sig[b'q'] != b"dns/txt":
+    raise ValidationError(f"q= value is not dns/txt ({sig[b'q']})")
+  if b't' in sig and re.match(br"\d+$", sig[b't']) is None:
+    raise ValidationError(f"t= value is not a decimal integer ({sig[b't']})")
+  if b'x' in sig:
+    if re.match(br"\d+$", sig[b'x']) is None:
+      raise ValidationError(f"x= value is not a decimal integer ({sig[b'x']})")
+    if int(sig[b'x']) < int(sig[b't']):
+      raise ValidationError(
+          f"x= value is less than t= value (x={sig[b'x']} t={sig[b't']})")
 
 
 def rfc822_parse(message):
-    """Parse a message in RFC822 format.
+  """Parse a message in RFC822 format.
 
     @param message: The message in RFC822 format. Either CRLF or LF is an accepted line separator.
     @return: Returns a tuple of (headers, body) where headers is a list of (name, value) pairs.
     The body is a CRLF-separated string.
     """
-    headers = []
-    lines = re.split(b"\r?\n", message)
-    i = 0
-    while i < len(lines):
-        if len(lines[i]) == 0:
-            # End of headers, return what we have plus the body, excluding the blank line.
-            i += 1
-            break
-        if lines[i][0] in ("\x09", "\x20", 0x09, 0x20):
-            headers[-1][1] += lines[i]+b"\r\n"
-        else:
-            m = re.match(br"([\x21-\x7e]+?):", lines[i])
-            if m is not None:
-                headers.append([m.group(1), lines[i][m.end(0):]+b"\r\n"])
-            elif lines[i].startswith(b"From "):
-                pass
-            else:
-                raise MessageFormatError("Unexpected characters in RFC822 header: %s" % lines[i])
+  headers = []
+  lines = re.split(b"\r?\n", message)
+  i = 0
+  while i < len(lines):
+    if len(lines[i]) == 0:
+        # End of headers, return what we have plus the body, excluding the blank line.
         i += 1
-    return (headers, b"\r\n".join(lines[i:]))
+        break
+    if lines[i][0] in ("\x09", "\x20", 0x09, 0x20):
+      headers[-1][1] += lines[i]+b"\r\n"
+    else:
+      m = re.match(br"([\x21-\x7e]+?):", lines[i])
+      if m is not None:
+        headers.append([m[1], lines[i][m.end(0):]+b"\r\n"])
+      elif not lines[i].startswith(b"From "):
+        raise MessageFormatError(f"Unexpected characters in RFC822 header: {lines[i]}")
+    i += 1
+  return (headers, b"\r\n".join(lines[i:]))
 
 
 
 def fold(header):
-    """Fold a header line into multiple crlf-separated lines at column 72.
+  """Fold a header line into multiple crlf-separated lines at column 72.
 
     >>> fold(b'foo')
     'foo'
@@ -226,22 +218,19 @@ def fold(header):
     >>> len(fold(b'foo'*25).splitlines()[0])
     72
     """
-    i = header.rfind(b"\r\n ")
-    if i == -1:
-        pre = b""
-    else:
-        i += 3
-        pre = header[:i]
-        header = header[i:]
-    while len(header) > 72:
-        i = header[:72].rfind(b" ")
-        if i == -1:
-            j = 72
-        else:
-            j = i + 1
-        pre += header[:j] + b"\r\n "
-        header = header[j:]
-    return pre + header
+  i = header.rfind(b"\r\n ")
+  if i == -1:
+      pre = b""
+  else:
+      i += 3
+      pre = header[:i]
+      header = header[i:]
+  while len(header) > 72:
+    i = header[:72].rfind(b" ")
+    j = 72 if i == -1 else i + 1
+    pre += header[:j] + b"\r\n "
+    header = header[j:]
+  return pre + header
 
 #: Hold messages and options during DKIM signing and verification.
 class DKIM(object):
@@ -296,8 +285,7 @@ class DKIM(object):
         logger = get_default_logger()
     self.logger = logger
     if signature_algorithm not in HASH_ALGORITHMS:
-        raise ParameterError(
-            "Unsupported signature algorithm: "+signature_algorithm)
+      raise ParameterError(f"Unsupported signature algorithm: {signature_algorithm}")
     self.signature_algorithm = signature_algorithm
     #: Header fields which should be signed.  Default from RFC4871
     self.should_sign = set(DKIM.SHOULD)
@@ -330,10 +318,7 @@ class DKIM(object):
   #: (with either \\n or \\r\\n line endings)
   #: @since: 0.5
   def set_message(self,message):
-    if message:
-      self.headers, self.body = rfc822_parse(message)
-    else:
-      self.headers, self.body = [],''
+    self.headers, self.body = rfc822_parse(message) if message else ([], '')
     #: The DKIM signing domain last signed or verified.
     self.domain = None
     #: The DKIM key selector last signed or verified.
@@ -424,8 +409,8 @@ class DKIM(object):
     # raise exception for any SHOULD_NOT headers, call can modify 
     # SHOULD_NOT if really needed.
     for x in include_headers:
-        if x.lower() in self.should_not_sign:
-            raise ParameterError("The %s header field SHOULD NOT be signed"%x)
+      if x.lower() in self.should_not_sign:
+        raise ParameterError(f"The {x} header field SHOULD NOT be signed")
 
     body = canon_policy.canonicalize_body(self.body)
 
@@ -508,16 +493,16 @@ class DKIM(object):
     self.selector = sig[b's']
 
     try:
-        canon_policy = CanonicalizationPolicy.from_c_value(sig.get(b'c'))
+      canon_policy = CanonicalizationPolicy.from_c_value(sig.get(b'c'))
     except InvalidCanonicalizationPolicyError as e:
-        raise MessageFormatError("invalid c= value: %s" % e.args[0])
+      raise MessageFormatError(f"invalid c= value: {e.args[0]}")
     headers = canon_policy.canonicalize_headers(self.headers)
     body = canon_policy.canonicalize_body(self.body)
 
     try:
-        hasher = HASH_ALGORITHMS[sig[b'a']]
+      hasher = HASH_ALGORITHMS[sig[b'a']]
     except KeyError as e:
-        raise MessageFormatError("unknown signature algorithm: %s" % e.args[0])
+      raise MessageFormatError(f"unknown signature algorithm: {e.args[0]}")
 
     if b'l' in sig:
         body = body[:int(sig[b'l'])]
@@ -525,31 +510,31 @@ class DKIM(object):
     h = hasher()
     h.update(body)
     bodyhash = h.digest()
-    logger.debug("bh: %s" % base64.b64encode(bodyhash))
+    logger.debug(f"bh: {base64.b64encode(bodyhash)}")
     try:
         bh = base64.b64decode(re.sub(br"\s+", b"", sig[b'bh']))
     except TypeError as e:
         raise MessageFormatError(str(e))
     if bodyhash != bh:
-        raise ValidationError(
-            "body hash mismatch (got %s, expected %s)" %
-            (base64.b64encode(bodyhash), sig[b'bh']))
+      raise ValidationError(
+          f"body hash mismatch (got {base64.b64encode(bodyhash)}, expected {sig[b'bh']})"
+      )
 
     name = sig[b's'] + b"._domainkey." + sig[b'd'] + b"."
     s = dnsfunc(name)
     if not s:
-        raise KeyFormatError("missing public key: %s"%name)
+      raise KeyFormatError(f"missing public key: {name}")
     try:
         pub = parse_tag_value(s)
     except InvalidTagValueList as e:
         raise KeyFormatError(e)
     try:
-        pk = parse_public_key(base64.b64decode(pub[b'p']))
-        self.keysize = bitsize(pk['modulus'])
+      pk = parse_public_key(base64.b64decode(pub[b'p']))
+      self.keysize = bitsize(pk['modulus'])
     except KeyError:
-        raise KeyFormatError("incomplete public key: %s" % s)
+      raise KeyFormatError(f"incomplete public key: {s}")
     except (TypeError,UnparsableKeyError) as e:
-        raise KeyFormatError("could not parse public key (%s): %s" % (pub[b'p'],e))
+      raise KeyFormatError(f"could not parse public key ({pub[b'p']}): {e}")
     include_headers = [x.lower() for x in re.split(br"\s*:\s*", sig[b'h'])]
     self.include_headers = tuple(include_headers)
     # address bug#644046 by including any additional From header
@@ -557,18 +542,18 @@ class DKIM(object):
     # this shouldn't break any legitimate messages.  This could be
     # generalized to check for extras of other singleton headers.
     if 'from' in include_headers:
-      include_headers.append('from')      
+      include_headers.append('from')
     h = hasher()
     self.signed_headers = hash_headers(
         h, canon_policy, headers, include_headers, sigheaders[idx], sig)
     try:
-        signature = base64.b64decode(re.sub(br"\s+", b"", sig[b'b']))
-        res = RSASSA_PKCS1_v1_5_verify(h, signature, pk)
-        if res and self.keysize < self.minkey:
-          raise KeyFormatError("public key too small: %d" % self.keysize)
-        return res
+      signature = base64.b64decode(re.sub(br"\s+", b"", sig[b'b']))
+      res = RSASSA_PKCS1_v1_5_verify(h, signature, pk)
+      if res and self.keysize < self.minkey:
+        raise KeyFormatError("public key too small: %d" % self.keysize)
+      return res
     except (TypeError,DigestTooLargeError) as e:
-        raise KeyFormatError("digest too large for modulus: %s"%e)
+      raise KeyFormatError(f"digest too large for modulus: {e}")
 
 def sign(message, selector, domain, privkey, identity=None,
          canonicalize=(b'relaxed', b'simple'),
@@ -594,15 +579,15 @@ def sign(message, selector, domain, privkey, identity=None,
     return d.sign(selector, domain, privkey, identity=identity, canonicalize=canonicalize, include_headers=include_headers, length=length)
 
 def verify(message, logger=None, dnsfunc=get_txt, minkey=1024):
-    """Verify the first (topmost) DKIM signature on an RFC822 formatted message.
+  """Verify the first (topmost) DKIM signature on an RFC822 formatted message.
     @param message: an RFC822 formatted message (with either \\n or \\r\\n line endings)
     @param logger: a logger to which debug info will be written (default None)
     @return: True if signature verifies or False otherwise
     """
-    d = DKIM(message,logger=logger,minkey=minkey)
-    try:
-        return d.verify(dnsfunc=dnsfunc)
-    except DKIMException as x:
-        if logger is not None:
-            logger.error("%s" % x)
-        return False
+  d = DKIM(message,logger=logger,minkey=minkey)
+  try:
+    return d.verify(dnsfunc=dnsfunc)
+  except DKIMException as x:
+    if logger is not None:
+      logger.error(f"{x}")
+    return False

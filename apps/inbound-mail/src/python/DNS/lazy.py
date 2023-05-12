@@ -14,8 +14,7 @@ from Base import ServerError
 def revlookup(name):
     "convenience routine for doing a reverse lookup of an address"
     names = revlookupall(name)
-    if not names: return None
-    return names[0]     # return shortest name
+    return None if not names else names[0]
 
 def revlookupall(name):
     "convenience routine for doing a reverse lookup of an address"
@@ -33,14 +32,18 @@ def dnslookup(name,qtype):
     if Base.defaults['server'] == []: Base.DiscoverNameServers()
     result = Base.DnsRequest(name=name, qtype=qtype).req()
     if result.header['status'] != 'NOERROR':
-        raise ServerError("DNS query status: %s" % result.header['status'],
-            result.header['rcode'])
+        raise ServerError(
+            f"DNS query status: {result.header['status']}",
+            result.header['rcode'],
+        )
     elif len(result.answers) == 0 and Base.defaults['server_rotate']:
         # check with next DNS server
         result = Base.DnsRequest(name=name, qtype=qtype).req()
     if result.header['status'] != 'NOERROR':
-        raise ServerError("DNS query status: %s" % result.header['status'],
-            result.header['rcode'])
+        raise ServerError(
+            f"DNS query status: {result.header['status']}",
+            result.header['rcode'],
+        )
     return [x['data'] for x in result.answers]
 
 def mxlookup(name):

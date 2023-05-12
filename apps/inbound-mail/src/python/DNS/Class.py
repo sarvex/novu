@@ -10,11 +10,10 @@ $Id: Class.py,v 1.6.2.1 2011/03/16 20:06:39 customdesigned Exp $
 """
 
 
+
 IN = 1          # the Internet
 CS = 2          # the CSNET class (Obsolete - used only for examples in
-                # some obsolete RFCs)
 CH = 3          # the CHAOS class. When someone shows me python running on
-                # a Symbolics Lisp machine, I'll look at implementing this.
 HS = 4          # Hesiod [Dyer 87]
 
 # QCLASS values (section 3.2.5)
@@ -25,9 +24,7 @@ ANY = 255       # any class
 # Construct reverse mapping dictionary
 
 _names = dir()
-classmap = {}
-for _name in _names:
-    if _name[0] != '_': classmap[eval(_name)] = _name
+classmap = {eval(_name): _name for _name in _names if _name[0] != '_'}
 
 def classstr(klass):
     if classmap.has_key(klass): return classmap[klass]

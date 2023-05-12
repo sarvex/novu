@@ -131,4 +131,4 @@ class CanonicalizationPolicy:
         return self.body_algorithm.canonicalize_body(body)
 
 
-ALGORITHMS = dict((c.name, c) for c in (Simple, Relaxed))
+ALGORITHMS = {c.name: c for c in (Simple, Relaxed)}

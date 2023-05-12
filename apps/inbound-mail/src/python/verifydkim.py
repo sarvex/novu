@@ -13,7 +13,7 @@ def main():
     res = None
     res = dkim.verify(msg)
 
-    print('[' + os.path.basename(__file__) + '] isDkimValid = ' + str(res))
+    print(f'[{os.path.basename(__file__)}] isDkimValid = {str(res)}')
     if not res:
         # Invalid signature, exit with code 11.
         sys.exit(11)

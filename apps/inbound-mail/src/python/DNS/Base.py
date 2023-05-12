@@ -37,45 +37,43 @@ class ServerError(DNSError):
         self.rcode = rcode
 
 class IncompleteReplyError(DNSError): pass
-
 # Lib uses some of the above exception classes, so import after defining.
 import Lib
 
-defaults= { 'protocol':'udp', 'port':53, 'opcode':Opcode.QUERY,
-            'qtype':Type.A, 'rd':1, 'timing':1, 'timeout': 30,
-            'server_rotate': 0 }
-
-defaults['server']=[]
+defaults = {
+    'protocol': 'udp',
+    'port': 53,
+    'opcode': Opcode.QUERY,
+    'qtype': Type.A,
+    'rd': 1,
+    'timing': 1,
+    'timeout': 30,
+    'server_rotate': 0,
+    'server': [],
+}
 
 def ParseResolvConf(resolv_path="/etc/resolv.conf"):
-    "parses the /etc/resolv.conf file and sets defaults for name servers"
-    global defaults
-    lines=open(resolv_path).readlines()
-    for line in lines:
-        line = string.strip(line)
-        if not line or line[0]==';' or line[0]=='#':
-            continue
-        fields=string.split(line)
-        if len(fields) < 2: 
-            continue
-        if fields[0]=='domain' and len(fields) > 1:
-            defaults['domain']=fields[1]
-        if fields[0]=='search':
-            pass
-        if fields[0]=='options':
-            pass
-        if fields[0]=='sortlist':
-            pass
-        if fields[0]=='nameserver':
-            defaults['server'].append(fields[1])
+  "parses the /etc/resolv.conf file and sets defaults for name servers"
+  global defaults
+  lines=open(resolv_path).readlines()
+  for line in lines:
+    line = string.strip(line)
+    if not line or line[0]==';' or line[0]=='#':
+        continue
+    fields=string.split(line)
+    if len(fields) < 2: 
+        continue
+    if fields[0]=='domain' and len(fields) > 1:
+        defaults['domain']=fields[1]
+    if fields[0]=='nameserver':
+        defaults['server'].append(fields[1])
 
 def DiscoverNameServers():
-    import sys
-    if sys.platform in ('win32', 'nt'):
-        import win32dns
-        defaults['server']=win32dns.RegistryResolve()
-    else:
-        return ParseResolvConf()
+  import sys
+  if sys.platform not in ('win32', 'nt'):
+    return ParseResolvConf()
+  import win32dns
+  defaults['server']=win32dns.RegistryResolve()
 
 class DnsRequest:
     """ high level Request object """
@@ -88,26 +86,21 @@ class DnsRequest:
         self.tid = 0
 
     def argparse(self,name,args):
-        if not name and self.defaults.has_key('name'):
-            args['name'] = self.defaults['name']
-        if type(name) is types.StringType:
-            args['name']=name
-        else:
-            if len(name) == 1:
-                if name[0]:
-                    args['name']=name[0]
-        if defaults['server_rotate'] and \
-                type(defaults['server']) == types.ListType:
-            defaults['server'] = defaults['server'][1:]+defaults['server'][:1]
-        for i in defaults.keys():
-            if not args.has_key(i):
-                if self.defaults.has_key(i):
-                    args[i]=self.defaults[i]
-                else:
-                    args[i]=defaults[i]
-        if type(args['server']) == types.StringType:
-            args['server'] = [args['server']]
-        self.args=args
+      if not name and self.defaults.has_key('name'):
+          args['name'] = self.defaults['name']
+      if type(name) is types.StringType:
+        args['name']=name
+      elif len(name) == 1 and name[0]:
+        args['name']=name[0]
+      if defaults['server_rotate'] and \
+                  type(defaults['server']) == types.ListType:
+          defaults['server'] = defaults['server'][1:]+defaults['server'][:1]
+      for i in defaults.keys():
+        if not args.has_key(i):
+          args[i] = self.defaults[i] if self.defaults.has_key(i) else defaults[i]
+      if type(args['server']) == types.StringType:
+          args['server'] = [args['server']]
+      self.args=args
 
     def socketInit(self,a,b):
         self.s = socket.socket(a,b)
@@ -130,10 +123,10 @@ class DnsRequest:
             rem = self.time_start + self.timeout - time.time()
             if rem <= 0: raise TimeoutError, 'Timeout'
             self.s.settimeout(rem)
-        buf = f.read(count - len(res))
-        if not buf:
+        if buf := f.read(count - len(res)):
+          res += buf
+        else:
           raise IncompleteReplyError, 'incomplete reply - %d of %d read' % (len(res),count)
-        res += buf
       return res
 
     def processTCPReply(self):
